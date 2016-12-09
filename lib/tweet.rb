@@ -8,19 +8,14 @@ class Tweet
     FROM tweets;
     SQL
     results = DB[:conn].execute(sql)
-    # create an instance for each row
     results.map do |tweet_result|
-      # tweet_result ==> {"id"=>1, "username"=>"coffeedad", "message"=>"good coffee"}
-      # Tweet.new({"id" => tweet_result["id"], "username" => tweet_result["username"], "message" => tweet_result["message"]})
       Tweet.new(tweet_result)
     end
-    # we need to return an array of tweet instances
-    # based on what is in the database
   end
 
-  def self.first
-    self.all.first
-  end
+  # def self.first
+  #   self.all.first
+  # end
 
   def initialize(options={})
     @message = options['message']
@@ -29,6 +24,11 @@ class Tweet
   end
 
   def save
+    self.id ? update : create
+    self
+  end
+
+  def create
     sql = <<-SQL
       INSERT INTO tweets (username, message)
       VALUES (? , ?)
@@ -43,16 +43,56 @@ class Tweet
 
     id_result = DB[:conn].execute(id_sql).first
     @id = id_result["id"]
-    self
   end
+
+  def update
+    sql = <<-SQL
+    UPDATE tweets 
+    SET username = ?, message = ?
+    WHERE id = ?
+    SQL
+    DB[:conn].execute(sql, self.username, self.message, self.id)
+  end
+
+  def self.find(id)
+    sql = <<-SQL
+        SELECT * 
+        FROM tweets
+        WHERE id = ?
+        SQL
+    found_tweet = DB[:conn].execute(sql, id).first
+    
+    if found_tweet.nil?
+      raise TweetError, "No tweet found - please try again"
+    else
+      Tweet.new(found_tweet)
+    end
+
+  end
+
 
   def ==(obj)
     self.id == obj.id
   end
 
+  def self.where(query_hash)
+    key = query_hash.keys.first
+    value = query_hash[key]
+    sql = <<-SQL
+        SELECT * 
+        FROM tweets
+        WHERE #{key} = ?
+        SQL
+    DB[:conn].execute(sql, value).map { |result| Tweet.new(result) }
+
+    end
+
+  class TweetError < StandardError
+    def initalize(message = "Something broke")
+      puts message
+      super
+    end
 end
+  
 
-
-# Tweet.new
-# Tweet.new({'message' => 'Good coffee'})
-# Tweet.new({'message' => 'Good coffee', 'username' => 'coffeedad', 'beef' => 'true'})
+end
