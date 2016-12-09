@@ -2,15 +2,16 @@ class Tweet
   attr_accessor :message, :username, :id
 
   def self.all
-    # find all the rows in the database
     sql = <<-SQL
-    SELECT *
-    FROM tweets;
-    SQL
+      SELECT *
+      FROM tweets;
+      SQL
+    
     results = DB[:conn].execute(sql)
     results.map do |tweet_result|
       Tweet.new(tweet_result)
     end
+  
   end
 
   # def self.first
